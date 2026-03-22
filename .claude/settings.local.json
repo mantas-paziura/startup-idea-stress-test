@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx create-next-app@latest . --yes)",
+      "Bash(npm install:*)",
+      "Bash(npm run:*)",
+      "Bash(taskkill //F //IM node.exe)",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(git init:*)",
+      "Bash(git add:*)"
+    ]
+  }
+}
