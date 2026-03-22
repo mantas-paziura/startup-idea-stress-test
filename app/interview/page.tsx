@@ -6,6 +6,7 @@ import type { Message, InterviewSummary, ChatResponse } from "@/app/types";
 import ChatInterface from "@/components/ChatInterface";
 import SummaryView from "@/components/SummaryView";
 import ProgressBar from "@/components/ProgressBar";
+import { usePostHog } from "@/lib/posthog";
 
 async function sendToAPI(messages: Message[]): Promise<ChatResponse> {
   const res = await fetch("/api/chat", {
@@ -30,6 +31,7 @@ function estimateProgress(messages: Message[]): number {
 
 export default function InterviewPage() {
   const router = useRouter();
+  const { capture } = usePostHog();
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [summary, setSummary] = useState<InterviewSummary | null>(null);
@@ -45,6 +47,11 @@ export default function InterviewPage() {
     try {
       const response = await sendToAPI(allMessages);
       if (response.interviewDone && response.summary) {
+        capture("interview_completed", {
+          total_messages: allMessages.length,
+          strengths_count: response.summary.strengths.length,
+          weaknesses_count: response.summary.weaknesses.length,
+        });
         setSummary(response.summary);
       } else {
         const assistantMsg: Message = {
@@ -76,6 +83,7 @@ export default function InterviewPage() {
     }
 
     initializedRef.current = true;
+    capture("interview_started", { idea_length: idea.length });
     const userMsg: Message = {
       id: crypto.randomUUID(),
       role: "user",

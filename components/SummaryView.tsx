@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import type { InterviewSummary, Suggestions } from "@/app/types";
 import NeonButton from "./NeonButton";
+import { usePostHog } from "@/lib/posthog";
 
 function Section({
   label,
@@ -84,6 +85,7 @@ export default function SummaryView({
 }: {
   summary: InterviewSummary;
 }) {
+  const { capture } = usePostHog();
   const [copied, setCopied] = useState(false);
   const [suggestions, setSuggestions] = useState<Suggestions | null>(null);
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
@@ -94,12 +96,14 @@ export default function SummaryView({
   }, []);
 
   async function handleCopy() {
+    capture("summary_copied");
     await navigator.clipboard.writeText(summaryToText(summary));
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   }
 
   function handleDownload() {
+    capture("summary_downloaded");
     const text = summaryToText(summary);
     const blob = new Blob([text], { type: "text/plain" });
     const url = URL.createObjectURL(blob);
@@ -111,6 +115,7 @@ export default function SummaryView({
   }
 
   async function handleGetSuggestions() {
+    capture("suggestions_requested");
     setLoadingSuggestions(true);
     try {
       const res = await fetch("/api/suggestions", {
