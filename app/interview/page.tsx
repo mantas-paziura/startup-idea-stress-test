@@ -53,6 +53,14 @@ export default function InterviewPage() {
           weaknesses_count: response.summary.weaknesses.length,
         });
         setSummary(response.summary);
+
+        // Save session to history
+        const idea = sessionStorage.getItem("startup-idea") || "";
+        fetch("/api/sessions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ idea, summary: response.summary }),
+        }).catch(() => {});
       } else {
         const assistantMsg: Message = {
           id: crypto.randomUUID(),

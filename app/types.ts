@@ -22,3 +22,10 @@ export interface Suggestions {
   weaknesses: string[];
   criticalUnknowns: string[];
 }
+
+export interface Session {
+  id: string;
+  idea: string;
+  summary: InterviewSummary;
+  createdAt: string;
+}

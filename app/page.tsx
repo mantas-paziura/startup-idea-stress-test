@@ -1,8 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useUser, SignIn } from "@clerk/nextjs";
-import { useState } from "react";
+import { useUser, useClerk } from "@clerk/nextjs";
 import IdeaInput from "@/components/IdeaInput";
 import { usePostHog } from "@/lib/posthog";
 
@@ -10,7 +9,7 @@ export default function Home() {
   const router = useRouter();
   const { capture } = usePostHog();
   const { isSignedIn, isLoaded } = useUser();
-  const [showSignIn, setShowSignIn] = useState(false);
+  const { openSignIn } = useClerk();
 
   function handleSubmit(idea: string) {
     sessionStorage.setItem("startup-idea", idea);
@@ -22,7 +21,7 @@ export default function Home() {
       router.push("/interview");
     } else {
       capture("auth_gate_shown");
-      setShowSignIn(true);
+      openSignIn({ fallbackRedirectUrl: "/interview" });
     }
   }
 
@@ -39,54 +38,29 @@ export default function Home() {
         }}
       />
 
-      {showSignIn ? (
-        <div
-          className="relative z-10 opacity-0"
-          style={{ animation: "fadeIn 0.4s ease forwards" }}
+      <div className="flex flex-col items-center gap-5 mb-16 relative z-10">
+        <h1
+          className="text-6xl md:text-7xl font-light tracking-tight text-center leading-[1.1]"
+          style={{
+            background: "linear-gradient(135deg, #f5f5f5 0%, #a78bfa 40%, #22d3ee 60%, #f5f5f5 100%)",
+            backgroundSize: "300% auto",
+            WebkitBackgroundClip: "text",
+            WebkitTextFillColor: "transparent",
+            animation: "shimmer 8s linear infinite",
+          }}
         >
-          <p
-            className="text-center text-sm mb-6"
-            style={{ color: "var(--color-text-secondary)" }}
-          >
-            Sign in to start your stress test
-          </p>
-          <SignIn
-            fallbackRedirectUrl="/interview"
-            appearance={{
-              elements: {
-                rootBox: "mx-auto",
-                card: "bg-[#18181b] border border-[rgba(255,255,255,0.08)]",
-              },
-            }}
-          />
-        </div>
-      ) : (
-        <>
-          <div className="flex flex-col items-center gap-5 mb-16 relative z-10">
-            <h1
-              className="text-6xl md:text-7xl font-light tracking-tight text-center leading-[1.1]"
-              style={{
-                background: "linear-gradient(135deg, #f5f5f5 0%, #a78bfa 40%, #22d3ee 60%, #f5f5f5 100%)",
-                backgroundSize: "300% auto",
-                WebkitBackgroundClip: "text",
-                WebkitTextFillColor: "transparent",
-                animation: "shimmer 8s linear infinite",
-              }}
-            >
-              What are you
-              <br />
-              thinking about?
-            </h1>
-            <p className="text-lg mt-2 max-w-md text-center" style={{ color: "var(--color-text-secondary)" }}>
-              Describe your idea. Get grilled. Leave sharper.
-            </p>
-          </div>
+          What are you
+          <br />
+          thinking about?
+        </h1>
+        <p className="text-lg mt-2 max-w-md text-center" style={{ color: "var(--color-text-secondary)" }}>
+          Describe your idea. Get grilled. Leave sharper.
+        </p>
+      </div>
 
-          <div className="relative z-10 w-full flex justify-center">
-            <IdeaInput onSubmit={handleSubmit} />
-          </div>
-        </>
-      )}
+      <div className="relative z-10 w-full flex justify-center">
+        <IdeaInput onSubmit={handleSubmit} />
+      </div>
     </div>
   );
 }
