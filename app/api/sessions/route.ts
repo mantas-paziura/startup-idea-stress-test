@@ -11,7 +11,6 @@ async function ensureDir() {
 }
 
 function filePath(userId: string) {
-  // Sanitize userId to prevent path traversal
   const safe = userId.replace(/[^a-zA-Z0-9_-]/g, "");
   return path.join(DATA_DIR, `${safe}.json`);
 }
@@ -46,13 +45,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { idea, summary } = await request.json();
+  const { idea, summary, status = "in-progress" } = await request.json();
   const sessions = await readSessions(userId);
 
   const session: Session = {
     id: crypto.randomUUID(),
     idea,
-    summary,
+    status,
+    summary: summary || null,
     createdAt: new Date().toISOString(),
   };
 
@@ -60,6 +60,27 @@ export async function POST(request: Request) {
 
   // Keep last 50 sessions
   if (sessions.length > 50) sessions.length = 50;
+
+  await writeSessions(userId, sessions);
+  return NextResponse.json(session);
+}
+
+export async function PATCH(request: Request) {
+  const { userId } = await auth();
+  if (!userId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { id, summary } = await request.json();
+  const sessions = await readSessions(userId);
+  const session = sessions.find((s) => s.id === id);
+
+  if (!session) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
+  session.status = "completed";
+  session.summary = summary;
 
   await writeSessions(userId, sessions);
   return NextResponse.json(session);

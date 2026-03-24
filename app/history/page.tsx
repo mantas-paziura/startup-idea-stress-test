@@ -102,12 +102,26 @@ export default function HistoryPage() {
                   <p className="text-sm font-medium leading-relaxed">
                     {truncate(session.idea, 120)}
                   </p>
-                  <p
-                    className="text-xs mt-1.5"
-                    style={{ color: "var(--color-muted)" }}
-                  >
-                    {formatDate(session.createdAt)}
-                  </p>
+                  <div className="flex items-center gap-2 mt-1.5">
+                    <p
+                      className="text-xs"
+                      style={{ color: "var(--color-muted)" }}
+                    >
+                      {formatDate(session.createdAt)}
+                    </p>
+                    {session.status === "in-progress" && (
+                      <span
+                        className="text-[10px] px-1.5 py-0.5 rounded-full"
+                        style={{
+                          color: "#fbbf24",
+                          backgroundColor: "rgba(251, 191, 36, 0.1)",
+                          border: "1px solid rgba(251, 191, 36, 0.2)",
+                        }}
+                      >
+                        In progress
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <span
                   className="text-xs shrink-0 mt-0.5 transition-transform duration-200"
@@ -131,32 +145,43 @@ export default function HistoryPage() {
                     animation: "fadeIn 0.3s ease forwards",
                   }}
                 >
-                  <SummarySection
-                    label="Strengths"
-                    items={session.summary.strengths}
-                  />
-                  <SummarySection
-                    label="Weaknesses"
-                    items={session.summary.weaknesses}
-                  />
-                  <SummarySection
-                    label="Critical Unknowns"
-                    items={session.summary.criticalUnknowns}
-                  />
-                  <div>
-                    <p
-                      className="text-[10px] font-semibold uppercase tracking-widest mb-1.5"
-                      style={{ color: "var(--color-accent)" }}
-                    >
-                      Next Question
-                    </p>
+                  {session.summary ? (
+                    <>
+                      <SummarySection
+                        label="Strengths"
+                        items={session.summary.strengths}
+                      />
+                      <SummarySection
+                        label="Weaknesses"
+                        items={session.summary.weaknesses}
+                      />
+                      <SummarySection
+                        label="Critical Unknowns"
+                        items={session.summary.criticalUnknowns}
+                      />
+                      <div>
+                        <p
+                          className="text-[10px] font-semibold uppercase tracking-widest mb-1.5"
+                          style={{ color: "var(--color-accent)" }}
+                        >
+                          Next Question
+                        </p>
+                        <p
+                          className="text-sm italic"
+                          style={{ color: "var(--color-accent)", opacity: 0.8 }}
+                        >
+                          &ldquo;{session.summary.mostImportantNextQuestion}&rdquo;
+                        </p>
+                      </div>
+                    </>
+                  ) : (
                     <p
                       className="text-sm italic"
-                      style={{ color: "var(--color-accent)", opacity: 0.8 }}
+                      style={{ color: "var(--color-muted)" }}
                     >
-                      &ldquo;{session.summary.mostImportantNextQuestion}&rdquo;
+                      Interview was not completed.
                     </p>
-                  </div>
+                  )}
                 </div>
               )}
             </button>

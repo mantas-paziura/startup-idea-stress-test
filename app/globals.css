@@ -29,6 +29,25 @@
   --font-mono: var(--font-geist-mono);
 }
 
+/* Clerk profile text contrast fix */
+.cl-userProfile-root,
+.cl-userProfile-root *,
+.cl-modalContent *,
+.cl-profileSection__profile *,
+.cl-profileSection__emailAddresses *,
+.cl-profileSection__connectedAccounts *,
+.cl-profileSection__danger * {
+  color: inherit;
+}
+.cl-profileSectionContent {
+  color: #d4d4d8 !important;
+}
+.cl-profileSectionContent__profile,
+.cl-profileSectionContent__emailAddresses,
+.cl-profileSectionContent__connectedAccounts {
+  color: #d4d4d8 !important;
+}
+
 body {
   background: var(--background);
   color: var(--foreground);

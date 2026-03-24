@@ -20,11 +20,8 @@ async function sendToAPI(messages: Message[]): Promise<ChatResponse> {
   return res.json();
 }
 
-// Estimate progress based on conversation exchanges
-// 7 themes = roughly 7-14 exchanges, so we estimate based on assistant message count
 function estimateProgress(messages: Message[]): number {
   const assistantMessages = messages.filter((m) => m.role === "assistant").length;
-  // Expect roughly 7-10 assistant messages to cover all themes
   const estimated = Math.min(95, (assistantMessages / 8) * 100);
   return Math.round(estimated);
 }
@@ -36,6 +33,7 @@ export default function InterviewPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [summary, setSummary] = useState<InterviewSummary | null>(null);
   const initializedRef = useRef(false);
+  const sessionIdRef = useRef<string | null>(null);
 
   const progress = useMemo(() => {
     if (summary) return 100;
@@ -54,13 +52,28 @@ export default function InterviewPage() {
         });
         setSummary(response.summary);
 
-        // Save session to history
-        const idea = sessionStorage.getItem("startup-idea") || "";
-        fetch("/api/sessions", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ idea, summary: response.summary }),
-        }).catch(() => {});
+        // Update existing session to completed, or create new one
+        if (sessionIdRef.current) {
+          fetch("/api/sessions", {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              id: sessionIdRef.current,
+              summary: response.summary,
+            }),
+          }).catch(() => {});
+        } else {
+          const idea = sessionStorage.getItem("startup-idea") || "";
+          fetch("/api/sessions", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              idea,
+              summary: response.summary,
+              status: "completed",
+            }),
+          }).catch(() => {});
+        }
       } else {
         const assistantMsg: Message = {
           id: crypto.randomUUID(),
@@ -79,7 +92,7 @@ export default function InterviewPage() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [capture]);
 
   useEffect(() => {
     if (initializedRef.current) return;
@@ -92,6 +105,19 @@ export default function InterviewPage() {
 
     initializedRef.current = true;
     capture("interview_started", { idea_length: idea.length });
+
+    // Create in-progress session
+    fetch("/api/sessions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ idea, status: "in-progress" }),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.id) sessionIdRef.current = data.id;
+      })
+      .catch(() => {});
+
     const userMsg: Message = {
       id: crypto.randomUUID(),
       role: "user",
@@ -99,7 +125,7 @@ export default function InterviewPage() {
     };
     setMessages([userMsg]);
     fetchReply([userMsg]);
-  }, [router, fetchReply]);
+  }, [router, fetchReply, capture]);
 
   function handleSendMessage(text: string) {
     const userMsg: Message = {

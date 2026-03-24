@@ -15,7 +15,7 @@ export default function Header() {
     >
       <button
         onClick={() => router.push("/history")}
-        className="text-xs font-medium px-3 py-1.5 rounded-lg transition-all duration-200 hover:text-[#c4b5fd]"
+        className="text-xs font-medium px-3 py-1.5 rounded-lg transition-all duration-200 hover:text-[#c4b5fd] hover:border-[rgba(167,139,250,0.3)] hover:bg-[rgba(167,139,250,0.08)] hover:shadow-[0_0_12px_rgba(139,92,246,0.15)]"
         style={{
           color: "var(--color-muted)",
           border: "1px solid var(--color-border)",

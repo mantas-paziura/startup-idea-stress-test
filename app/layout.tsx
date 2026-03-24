@@ -36,10 +36,11 @@ export default function RootLayout({
           colorBackground: "#1a1a1f",
           colorInputBackground: "#27272a",
           colorInputText: "#f5f5f5",
-          colorText: "#f5f5f5",
-          colorTextSecondary: "#a1a1aa",
+          colorText: "#e5e5e5",
+          colorTextSecondary: "#d4d4d8",
           colorNeutral: "#f5f5f5",
           colorTextOnPrimaryBackground: "#ffffff",
+          colorShimmer: "rgba(255,255,255,0.1)",
           borderRadius: "0.75rem",
         },
         elements: {
@@ -92,6 +93,85 @@ export default function RootLayout({
             "& + div": {
               color: "#71717a",
             },
+          },
+          profileSectionTitle: {
+            color: "#e5e5e5",
+          },
+          profileSectionTitleText: {
+            color: "#e5e5e5",
+          },
+          profileSectionPrimaryButton: {
+            color: "#a78bfa",
+          },
+          profileSectionItem: {
+            color: "#d4d4d8",
+          },
+          userPreviewMainIdentifier: {
+            color: "#f5f5f5",
+          },
+          userPreviewSecondaryIdentifier: {
+            color: "#d4d4d8",
+          },
+          navbarButton: {
+            color: "#d4d4d8",
+            "&:hover": {
+              color: "#f5f5f5",
+            },
+          },
+          badge: {
+            color: "#e5e5e5",
+            borderColor: "rgba(255,255,255,0.2)",
+          },
+          profilePage: {
+            color: "#f5f5f5",
+          },
+          page: {
+            color: "#f5f5f5",
+          },
+          pageHeader: {
+            color: "#f5f5f5",
+          },
+          menuButton: {
+            color: "#a1a1aa",
+            "&:hover": {
+              color: "#f5f5f5",
+            },
+          },
+          menuList: {
+            backgroundColor: "#1a1a1f",
+            border: "1px solid rgba(255,255,255,0.1)",
+            color: "#e5e5e5",
+          },
+          table: {
+            color: "#d4d4d8",
+          },
+          tableHead: {
+            color: "#a1a1aa",
+          },
+          formFieldAction: {
+            color: "#a78bfa",
+          },
+          footerActionText: {
+            color: "#a1a1aa",
+          },
+          alternativeMethodsBlockButton: {
+            color: "#d4d4d8",
+            border: "1px solid rgba(255,255,255,0.1)",
+            "&:hover": {
+              backgroundColor: "#27272a",
+            },
+          },
+          selectButton: {
+            color: "#d4d4d8",
+            borderColor: "rgba(255,255,255,0.1)",
+          },
+          actionCard: {
+            backgroundColor: "#27272a",
+            border: "1px solid rgba(255,255,255,0.1)",
+            color: "#d4d4d8",
+          },
+          button: {
+            color: "#d4d4d8",
           },
         },
       }}

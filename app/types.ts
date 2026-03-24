@@ -26,6 +26,7 @@ export interface Suggestions {
 export interface Session {
   id: string;
   idea: string;
-  summary: InterviewSummary;
+  status: "in-progress" | "completed";
+  summary: InterviewSummary | null;
   createdAt: string;
 }
