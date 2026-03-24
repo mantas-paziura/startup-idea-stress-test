@@ -10,26 +10,41 @@ export default function Header() {
   if (!isSignedIn) return null;
 
   return (
-    <header
-      className="fixed top-0 right-0 z-50 flex items-center gap-3 p-4"
-    >
+    <header className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between p-4">
       <button
-        onClick={() => router.push("/history")}
-        className="text-xs font-medium px-3 py-1.5 rounded-lg transition-all duration-200 hover:text-[#c4b5fd] hover:border-[rgba(167,139,250,0.3)] hover:bg-[rgba(167,139,250,0.08)] hover:shadow-[0_0_12px_rgba(139,92,246,0.15)]"
-        style={{
-          color: "var(--color-muted)",
-          border: "1px solid var(--color-border)",
-        }}
+        onClick={() => router.push("/")}
+        className="flex items-center gap-2 transition-opacity duration-200 hover:opacity-80"
       >
-        History
+        <span
+          className="text-sm font-semibold tracking-tight"
+          style={{
+            background: "linear-gradient(135deg, var(--color-accent), var(--color-cyan))",
+            WebkitBackgroundClip: "text",
+            WebkitTextFillColor: "transparent",
+          }}
+        >
+          Stress Test
+        </span>
       </button>
-      <UserButton
-        appearance={{
-          elements: {
-            avatarBox: "w-8 h-8",
-          },
-        }}
-      />
+      <div className="flex items-center gap-3">
+        <button
+          onClick={() => router.push("/history")}
+          className="text-xs font-medium px-3 py-1.5 rounded-lg transition-all duration-200 hover:text-[#c4b5fd] hover:border-[rgba(167,139,250,0.3)] hover:bg-[rgba(167,139,250,0.08)] hover:shadow-[0_0_12px_rgba(139,92,246,0.15)]"
+          style={{
+            color: "var(--color-muted)",
+            border: "1px solid var(--color-border)",
+          }}
+        >
+          History
+        </button>
+        <UserButton
+          appearance={{
+            elements: {
+              avatarBox: "w-8 h-8",
+            },
+          }}
+        />
+      </div>
     </header>
   );
 }

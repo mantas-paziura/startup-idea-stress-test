@@ -1,32 +1,16 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
-import { promises as fs } from "fs";
-import path from "path";
+import { getSupabase } from "@/lib/supabase";
 import type { Session } from "@/app/types";
 
-const DATA_DIR = path.join(process.cwd(), "data", "sessions");
-
-async function ensureDir() {
-  await fs.mkdir(DATA_DIR, { recursive: true });
-}
-
-function filePath(userId: string) {
-  const safe = userId.replace(/[^a-zA-Z0-9_-]/g, "");
-  return path.join(DATA_DIR, `${safe}.json`);
-}
-
-async function readSessions(userId: string): Promise<Session[]> {
-  try {
-    const data = await fs.readFile(filePath(userId), "utf-8");
-    return JSON.parse(data);
-  } catch {
-    return [];
-  }
-}
-
-async function writeSessions(userId: string, sessions: Session[]) {
-  await ensureDir();
-  await fs.writeFile(filePath(userId), JSON.stringify(sessions, null, 2));
+function toSession(row: Record<string, unknown>): Session {
+  return {
+    id: row.id as string,
+    idea: row.idea as string,
+    status: row.status as "in-progress" | "completed",
+    summary: row.summary as Session["summary"],
+    createdAt: row.created_at as string,
+  };
 }
 
 export async function GET() {
@@ -35,8 +19,17 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const sessions = await readSessions(userId);
-  return NextResponse.json(sessions);
+  const { data, error } = await getSupabase()
+    .from("sessions")
+    .select("*")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  return NextResponse.json((data || []).map(toSession));
 }
 
 export async function POST(request: Request) {
@@ -46,23 +39,23 @@ export async function POST(request: Request) {
   }
 
   const { idea, summary, status = "in-progress" } = await request.json();
-  const sessions = await readSessions(userId);
 
-  const session: Session = {
-    id: crypto.randomUUID(),
-    idea,
-    status,
-    summary: summary || null,
-    createdAt: new Date().toISOString(),
-  };
+  const { data, error } = await getSupabase()
+    .from("sessions")
+    .insert({
+      user_id: userId,
+      idea,
+      status,
+      summary: summary || null,
+    })
+    .select()
+    .single();
 
-  sessions.unshift(session);
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
 
-  // Keep last 50 sessions
-  if (sessions.length > 50) sessions.length = 50;
-
-  await writeSessions(userId, sessions);
-  return NextResponse.json(session);
+  return NextResponse.json(toSession(data));
 }
 
 export async function PATCH(request: Request) {
@@ -72,16 +65,18 @@ export async function PATCH(request: Request) {
   }
 
   const { id, summary } = await request.json();
-  const sessions = await readSessions(userId);
-  const session = sessions.find((s) => s.id === id);
 
-  if (!session) {
-    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  const { data, error } = await getSupabase()
+    .from("sessions")
+    .update({ status: "completed", summary })
+    .eq("id", id)
+    .eq("user_id", userId)
+    .select()
+    .single();
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 404 });
   }
 
-  session.status = "completed";
-  session.summary = summary;
-
-  await writeSessions(userId, sessions);
-  return NextResponse.json(session);
+  return NextResponse.json(toSession(data));
 }
