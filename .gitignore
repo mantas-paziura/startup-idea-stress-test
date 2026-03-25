@@ -46,3 +46,6 @@ next-env.d.ts
 
 # clerk configuration (can include secrets)
 /.clerk/
+
+# local Claude Code settings (permissions, local overrides)
+.claude/settings.local.json
