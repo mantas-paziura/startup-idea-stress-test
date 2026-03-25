@@ -1,11 +1,23 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { UserButton, useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 
 export default function Header() {
   const { isSignedIn } = useUser();
   const router = useRouter();
+  const [credits, setCredits] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!isSignedIn) return;
+    fetch("/api/credits")
+      .then((res) => res.json())
+      .then((data) => {
+        if (typeof data.balance === "number") setCredits(data.balance);
+      })
+      .catch(() => {});
+  }, [isSignedIn]);
 
   if (!isSignedIn) return null;
 
@@ -27,6 +39,16 @@ export default function Header() {
         </span>
       </button>
       <div className="flex items-center gap-3">
+        <button
+          onClick={() => router.push("/credits")}
+          className="text-xs font-medium px-3 py-1.5 rounded-lg transition-all duration-200 hover:text-[#c4b5fd] hover:border-[rgba(167,139,250,0.3)] hover:bg-[rgba(167,139,250,0.08)] hover:shadow-[0_0_12px_rgba(139,92,246,0.15)]"
+          style={{
+            color: "var(--color-muted)",
+            border: "1px solid var(--color-border)",
+          }}
+        >
+          {credits !== null ? `${credits} credits` : "Credits"}
+        </button>
         <button
           onClick={() => router.push("/history")}
           className="text-xs font-medium px-3 py-1.5 rounded-lg transition-all duration-200 hover:text-[#c4b5fd] hover:border-[rgba(167,139,250,0.3)] hover:bg-[rgba(167,139,250,0.08)] hover:shadow-[0_0_12px_rgba(139,92,246,0.15)]"

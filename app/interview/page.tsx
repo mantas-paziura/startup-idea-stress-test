@@ -8,14 +8,21 @@ import SummaryView from "@/components/SummaryView";
 import ProgressBar from "@/components/ProgressBar";
 import { usePostHog } from "@/lib/posthog";
 
-async function sendToAPI(messages: Message[]): Promise<ChatResponse> {
+async function sendToAPI(
+  messages: Message[],
+  sessionId: string | null
+): Promise<ChatResponse> {
   const res = await fetch("/api/chat", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       messages: messages.map((m) => ({ role: m.role, content: m.content })),
+      sessionId,
     }),
   });
+  if (res.status === 402) {
+    throw new Error("insufficient_credits");
+  }
   if (!res.ok) throw new Error("Failed to get response");
   return res.json();
 }
@@ -43,7 +50,7 @@ export default function InterviewPage() {
   const fetchReply = useCallback(async (allMessages: Message[]) => {
     setIsLoading(true);
     try {
-      const response = await sendToAPI(allMessages);
+      const response = await sendToAPI(allMessages, sessionIdRef.current);
       if (response.interviewDone && response.summary) {
         capture("interview_completed", {
           total_messages: allMessages.length,
@@ -82,7 +89,11 @@ export default function InterviewPage() {
         };
         setMessages((prev) => [...prev, assistantMsg]);
       }
-    } catch {
+    } catch (err) {
+      if (err instanceof Error && err.message === "insufficient_credits") {
+        router.push("/credits?reason=insufficient");
+        return;
+      }
       const errorMsg: Message = {
         id: crypto.randomUUID(),
         role: "assistant",
@@ -106,25 +117,28 @@ export default function InterviewPage() {
     initializedRef.current = true;
     capture("interview_started", { idea_length: idea.length });
 
-    // Create in-progress session
-    fetch("/api/sessions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ idea, status: "in-progress" }),
-    })
-      .then((res) => res.json())
-      .then((data) => {
+    // Create in-progress session, then start interview
+    (async () => {
+      try {
+        const res = await fetch("/api/sessions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ idea, status: "in-progress" }),
+        });
+        const data = await res.json();
         if (data.id) sessionIdRef.current = data.id;
-      })
-      .catch(() => {});
+      } catch {
+        // Continue without session ID — credit check will be skipped
+      }
 
-    const userMsg: Message = {
-      id: crypto.randomUUID(),
-      role: "user",
-      content: idea,
-    };
-    setMessages([userMsg]);
-    fetchReply([userMsg]);
+      const userMsg: Message = {
+        id: crypto.randomUUID(),
+        role: "user",
+        content: idea,
+      };
+      setMessages([userMsg]);
+      fetchReply([userMsg]);
+    })();
   }, [router, fetchReply, capture]);
 
   function handleSendMessage(text: string) {

@@ -30,3 +30,15 @@ export interface Session {
   summary: InterviewSummary | null;
   createdAt: string;
 }
+
+export interface CreditBalance {
+  balance: number;
+}
+
+export interface CreditPack {
+  id: string;
+  name: string;
+  credits: number;
+  price: number;
+  priceId: string;
+}

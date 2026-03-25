@@ -1,6 +1,8 @@
 import Anthropic from "@anthropic-ai/sdk";
+import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import type { ChatResponse } from "@/app/types";
+import { deductCredit, recordTokenUsage } from "@/lib/credits";
 
 const client = new Anthropic();
 
@@ -58,7 +60,23 @@ function parseCompletionResponse(text: string): ChatResponse {
 
 export async function POST(request: Request) {
   try {
-    const { messages } = await request.json();
+    const { userId } = await auth();
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { messages, sessionId } = await request.json();
+
+    // Deduct credit on first message of an interview
+    if (messages.length === 1 && sessionId) {
+      const result = await deductCredit(userId, sessionId);
+      if (!result.success) {
+        return NextResponse.json(
+          { error: "insufficient_credits", balance: result.balance },
+          { status: 402 }
+        );
+      }
+    }
 
     const response = await client.messages.create({
       model: "claude-sonnet-4-6",
@@ -73,6 +91,16 @@ export async function POST(request: Request) {
     const text =
       response.content[0].type === "text" ? response.content[0].text : "";
     const chatResponse = parseCompletionResponse(text);
+
+    // Track token usage (fire-and-forget)
+    recordTokenUsage(
+      userId,
+      sessionId || null,
+      "chat",
+      response.usage.input_tokens,
+      response.usage.output_tokens,
+      "claude-sonnet-4-6"
+    ).catch(() => {});
 
     return NextResponse.json(chatResponse);
   } catch (error) {

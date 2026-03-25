@@ -1,6 +1,8 @@
 import Anthropic from "@anthropic-ai/sdk";
+import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import type { InterviewSummary } from "@/app/types";
+import { recordTokenUsage } from "@/lib/credits";
 
 const client = new Anthropic();
 
@@ -21,8 +23,14 @@ Keep each suggestion to 1-2 sentences. Be specific and actionable, not generic.`
 
 export async function POST(request: Request) {
   try {
-    const { summary } = (await request.json()) as {
+    const { userId } = await auth();
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { summary, sessionId } = (await request.json()) as {
       summary: InterviewSummary;
+      sessionId?: string;
     };
 
     const response = await client.messages.create({
@@ -43,6 +51,17 @@ export async function POST(request: Request) {
     // Strip markdown code fences if present (handles ```json, ``` json, etc.)
     const cleaned = text.trim().replace(/^```\s*(?:json)?\s*\n?/, "").replace(/\n?\s*```\s*$/, "").trim();
     const parsed = JSON.parse(cleaned);
+
+    // Track token usage (fire-and-forget)
+    recordTokenUsage(
+      userId,
+      sessionId || null,
+      "suggestions",
+      response.usage.input_tokens,
+      response.usage.output_tokens,
+      "claude-sonnet-4-6"
+    ).catch(() => {});
+
     return NextResponse.json(parsed);
   } catch (error) {
     console.error("Suggestions API error:", error);
