@@ -11,12 +11,19 @@ export default function Header() {
 
   useEffect(() => {
     if (!isSignedIn) return;
-    fetch("/api/credits")
-      .then((res) => res.json())
-      .then((data) => {
-        if (typeof data.balance === "number") setCredits(data.balance);
-      })
-      .catch(() => {});
+
+    const fetchCredits = () => {
+      fetch("/api/credits")
+        .then((res) => res.json())
+        .then((data) => {
+          if (typeof data.balance === "number") setCredits(data.balance);
+        })
+        .catch(() => {});
+    };
+
+    fetchCredits();
+    const interval = setInterval(fetchCredits, 10000);
+    return () => clearInterval(interval);
   }, [isSignedIn]);
 
   if (!isSignedIn) return null;

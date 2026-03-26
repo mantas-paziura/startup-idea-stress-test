@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 import type { ChatResponse } from "@/app/types";
 import { deductCredit, recordTokenUsage } from "@/lib/credits";
 
-const client = new Anthropic();
+const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 const SYSTEM_PROMPT = `You are a YC partner conducting a fast, high-signal startup interview.
 
