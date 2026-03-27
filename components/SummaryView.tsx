@@ -82,13 +82,16 @@ function SparkleIcon() {
 
 export default function SummaryView({
   summary,
+  sessionId,
 }: {
   summary: InterviewSummary;
+  sessionId?: string | null;
 }) {
   const { capture } = usePostHog();
   const [copied, setCopied] = useState(false);
   const [suggestions, setSuggestions] = useState<Suggestions | null>(null);
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+  const [suggestionsError, setSuggestionsError] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -117,12 +120,17 @@ export default function SummaryView({
   async function handleGetSuggestions() {
     capture("suggestions_requested");
     setLoadingSuggestions(true);
+    setSuggestionsError(null);
     try {
       const res = await fetch("/api/suggestions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ summary }),
+        body: JSON.stringify({ summary, sessionId }),
       });
+      if (res.status === 402) {
+        setSuggestionsError("Insufficient credits. Purchase more to get AI suggestions.");
+        return;
+      }
       if (!res.ok) throw new Error("Failed");
       const data = await res.json();
       setSuggestions(data);
@@ -288,7 +296,7 @@ export default function SummaryView({
         className="mt-16 flex items-center gap-3 opacity-0"
         style={{ animation: "fadeIn 0.4s ease forwards", animationDelay: "500ms" }}
       >
-        {!suggestions && (
+        {!suggestions && !suggestionsError && (
           <NeonButton
             onClick={handleGetSuggestions}
             disabled={loadingSuggestions}
@@ -297,6 +305,23 @@ export default function SummaryView({
             <SparkleIcon />
             {loadingSuggestions ? "Generating..." : "Get suggestions from AI"}
           </NeonButton>
+        )}
+        {suggestionsError && (
+          <div className="flex items-center gap-3">
+            <p className="text-sm" style={{ color: "#fca5a5" }}>
+              {suggestionsError}
+            </p>
+            <button
+              onClick={() => window.open("/credits", "_blank")}
+              className="shrink-0 text-xs font-medium px-3 py-1.5 rounded-lg"
+              style={{
+                background: "linear-gradient(135deg, var(--color-accent-dim), var(--color-accent))",
+                color: "#ffffff",
+              }}
+            >
+              Buy Credits
+            </button>
+          </div>
         )}
       </div>
     </div>

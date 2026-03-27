@@ -9,6 +9,7 @@ function toSession(row: Record<string, unknown>): Session {
     idea: row.idea as string,
     status: row.status as "in-progress" | "completed",
     summary: row.summary as Session["summary"],
+    messages: (row.messages as Session["messages"]) ?? undefined,
     createdAt: row.created_at as string,
   };
 }
@@ -64,11 +65,20 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { id, summary } = await request.json();
+  const { id, summary, messages } = await request.json();
+
+  const updateData: Record<string, unknown> = {};
+  if (summary) {
+    updateData.status = "completed";
+    updateData.summary = summary;
+  }
+  if (messages) {
+    updateData.messages = messages;
+  }
 
   const { data, error } = await getSupabase()
     .from("sessions")
-    .update({ status: "completed", summary })
+    .update(updateData)
     .eq("id", id)
     .eq("user_id", userId)
     .select()

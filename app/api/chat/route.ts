@@ -2,7 +2,8 @@ import Anthropic from "@anthropic-ai/sdk";
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import type { ChatResponse } from "@/app/types";
-import { deductCredit, recordTokenUsage } from "@/lib/credits";
+import { checkBalance, deductTokenCredits } from "@/lib/credits";
+import { getSupabase } from "@/lib/supabase";
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -67,15 +68,13 @@ export async function POST(request: Request) {
 
     const { messages, sessionId } = await request.json();
 
-    // Deduct credit on first message of an interview
-    if (messages.length === 1 && sessionId) {
-      const result = await deductCredit(userId, sessionId);
-      if (!result.success) {
-        return NextResponse.json(
-          { error: "insufficient_credits", balance: result.balance },
-          { status: 402 }
-        );
-      }
+    // Pre-flight balance check on every message
+    const { balance, sufficient } = await checkBalance(userId);
+    if (!sufficient) {
+      return NextResponse.json(
+        { error: "insufficient_credits", balance },
+        { status: 402 }
+      );
     }
 
     const response = await client.messages.create({
@@ -92,17 +91,47 @@ export async function POST(request: Request) {
       response.content[0].type === "text" ? response.content[0].text : "";
     const chatResponse = parseCompletionResponse(text);
 
-    // Track token usage (fire-and-forget)
-    recordTokenUsage(
-      userId,
-      sessionId || null,
-      "chat",
-      response.usage.input_tokens,
-      response.usage.output_tokens,
-      "claude-sonnet-4-6"
-    ).catch(() => {});
+    // Deduct credits based on actual token usage
+    let creditResult = { success: true, balance, cost: 0 };
+    if (sessionId) {
+      creditResult = await deductTokenCredits(
+        userId,
+        sessionId,
+        response.usage.input_tokens,
+        response.usage.output_tokens,
+        "chat"
+      );
 
-    return NextResponse.json(chatResponse);
+      if (!creditResult.success) {
+        // Rare race: balance ran out between pre-flight and deduction
+        // Still return the response since API call already happened
+        console.warn(
+          `Credit deduction failed for user ${userId}, cost: ${creditResult.cost}`
+        );
+      }
+
+      // Save messages to session for resume capability (fire-and-forget)
+      const allMessages = chatResponse.interviewDone
+        ? messages
+        : [
+            ...messages,
+            { role: "assistant", content: chatResponse.reply },
+          ];
+
+      Promise.resolve(
+        getSupabase()
+          .from("sessions")
+          .update({ messages: allMessages })
+          .eq("id", sessionId)
+          .eq("user_id", userId)
+      ).catch(() => {});
+    }
+
+    return NextResponse.json({
+      ...chatResponse,
+      balance: creditResult.balance,
+      creditsCost: creditResult.cost,
+    });
   } catch (error) {
     console.error("Chat API error:", error);
     return NextResponse.json(

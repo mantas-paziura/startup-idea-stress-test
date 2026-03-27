@@ -31,7 +31,7 @@ export async function POST(request: Request) {
   if (event.type === "checkout.session.completed") {
     const session = event.data.object;
     const userId = session.metadata?.userId;
-    const creditAmount = parseInt(session.metadata?.creditAmount || "0", 10);
+    const creditAmount = parseFloat(session.metadata?.creditAmount || "0");
 
     if (userId && creditAmount > 0) {
       await addCredits(userId, creditAmount, session.id);

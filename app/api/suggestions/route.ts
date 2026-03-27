@@ -2,9 +2,9 @@ import Anthropic from "@anthropic-ai/sdk";
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import type { InterviewSummary } from "@/app/types";
-import { recordTokenUsage } from "@/lib/credits";
+import { checkBalance, deductTokenCredits } from "@/lib/credits";
 
-const client = new Anthropic();
+const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 const SUGGESTIONS_PROMPT = `You are a startup advisor. Given a stress test summary of a startup idea, provide concrete, actionable suggestions for how to improve each area.
 
@@ -33,6 +33,15 @@ export async function POST(request: Request) {
       sessionId?: string;
     };
 
+    // Pre-flight balance check
+    const { balance, sufficient } = await checkBalance(userId);
+    if (!sufficient) {
+      return NextResponse.json(
+        { error: "insufficient_credits", balance },
+        { status: 402 }
+      );
+    }
+
     const response = await client.messages.create({
       model: "claude-sonnet-4-6",
       max_tokens: 1024,
@@ -52,15 +61,16 @@ export async function POST(request: Request) {
     const cleaned = text.trim().replace(/^```\s*(?:json)?\s*\n?/, "").replace(/\n?\s*```\s*$/, "").trim();
     const parsed = JSON.parse(cleaned);
 
-    // Track token usage (fire-and-forget)
-    recordTokenUsage(
-      userId,
-      sessionId || null,
-      "suggestions",
-      response.usage.input_tokens,
-      response.usage.output_tokens,
-      "claude-sonnet-4-6"
-    ).catch(() => {});
+    // Deduct credits based on actual token usage
+    if (sessionId) {
+      deductTokenCredits(
+        userId,
+        sessionId,
+        response.usage.input_tokens,
+        response.usage.output_tokens,
+        "suggestions"
+      ).catch(() => {});
+    }
 
     return NextResponse.json(parsed);
   } catch (error) {

@@ -15,6 +15,8 @@ export interface ChatResponse {
   reply: string;
   interviewDone: boolean;
   summary: InterviewSummary | null;
+  balance?: number;
+  creditsCost?: number;
 }
 
 export interface Suggestions {
@@ -28,6 +30,7 @@ export interface Session {
   idea: string;
   status: "in-progress" | "completed";
   summary: InterviewSummary | null;
+  messages?: Message[];
   createdAt: string;
 }
 

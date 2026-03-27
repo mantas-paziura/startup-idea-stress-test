@@ -15,17 +15,24 @@ export function getStripe(): Stripe {
 
 export const CREDIT_PACKS = [
   {
-    id: "pack_5",
-    name: "5 Credits",
-    credits: 5,
-    price: 1000, // $10.00 in cents
-    priceId: process.env.STRIPE_PRICE_5_CREDITS || "",
+    id: "pack_10",
+    name: "10 Credits",
+    credits: 10,
+    price: 100, // $1.00 in cents
+    priceId: process.env.STRIPE_PRICE_10_CREDITS || "",
   },
   {
-    id: "pack_20",
-    name: "20 Credits",
-    credits: 20,
-    price: 3000, // $30.00 in cents
-    priceId: process.env.STRIPE_PRICE_20_CREDITS || "",
+    id: "pack_50",
+    name: "50 Credits",
+    credits: 50,
+    price: 500, // $5.00 in cents
+    priceId: process.env.STRIPE_PRICE_50_CREDITS || "",
+  },
+  {
+    id: "pack_200",
+    name: "200 Credits",
+    credits: 200,
+    price: 1500, // $15.00 in cents
+    priceId: process.env.STRIPE_PRICE_200_CREDITS || "",
   },
 ];

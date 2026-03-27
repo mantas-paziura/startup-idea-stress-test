@@ -54,7 +54,7 @@ export default function Header() {
             border: "1px solid var(--color-border)",
           }}
         >
-          {credits !== null ? `${credits} credits` : "Credits"}
+          {credits !== null ? `${Math.floor(credits * 10) / 10} credits` : "Credits"}
         </button>
         <button
           onClick={() => router.push("/history")}

@@ -39,6 +39,7 @@ export default function InterviewPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [summary, setSummary] = useState<InterviewSummary | null>(null);
+  const [outOfCredits, setOutOfCredits] = useState(false);
   const initializedRef = useRef(false);
   const sessionIdRef = useRef<string | null>(null);
 
@@ -46,6 +47,25 @@ export default function InterviewPage() {
     if (summary) return 100;
     return estimateProgress(messages);
   }, [messages, summary]);
+
+  // Poll for credit recovery when out of credits
+  useEffect(() => {
+    if (!outOfCredits) return;
+
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch("/api/credits");
+        const data = await res.json();
+        if (typeof data.balance === "number" && data.balance > 0) {
+          setOutOfCredits(false);
+        }
+      } catch {
+        // ignore
+      }
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [outOfCredits]);
 
   const fetchReply = useCallback(async (allMessages: Message[]) => {
     setIsLoading(true);
@@ -59,7 +79,7 @@ export default function InterviewPage() {
         });
         setSummary(response.summary);
 
-        // Update existing session to completed, or create new one
+        // Update existing session to completed
         if (sessionIdRef.current) {
           fetch("/api/sessions", {
             method: "PATCH",
@@ -91,7 +111,7 @@ export default function InterviewPage() {
       }
     } catch (err) {
       if (err instanceof Error && err.message === "insufficient_credits") {
-        router.push("/credits?reason=insufficient");
+        setOutOfCredits(true);
         return;
       }
       const errorMsg: Message = {
@@ -128,7 +148,7 @@ export default function InterviewPage() {
         const data = await res.json();
         if (data.id) sessionIdRef.current = data.id;
       } catch {
-        // Continue without session ID — credit check will be skipped
+        // Continue without session ID
       }
 
       const userMsg: Message = {
@@ -142,6 +162,7 @@ export default function InterviewPage() {
   }, [router, fetchReply, capture]);
 
   function handleSendMessage(text: string) {
+    if (outOfCredits) return;
     const userMsg: Message = {
       id: crypto.randomUUID(),
       role: "user",
@@ -158,10 +179,34 @@ export default function InterviewPage() {
         className="flex-1 opacity-0"
         style={{ animation: "fadeIn 0.5s ease forwards" }}
       >
-        <SummaryView summary={summary} />
+        <SummaryView summary={summary} sessionId={sessionIdRef.current} />
       </div>
     );
   }
+
+  const outOfCreditsBanner = outOfCredits ? (
+    <div
+      className="flex items-center justify-between gap-3 px-4 py-3 rounded-lg mb-3 max-w-2xl mx-auto"
+      style={{
+        background: "rgba(239, 68, 68, 0.08)",
+        border: "1px solid rgba(239, 68, 68, 0.2)",
+      }}
+    >
+      <p className="text-sm" style={{ color: "#fca5a5" }}>
+        You&apos;ve run out of credits. Purchase more to continue your interview.
+      </p>
+      <button
+        onClick={() => window.open("/credits", "_blank")}
+        className="shrink-0 text-xs font-medium px-3 py-1.5 rounded-lg transition-all duration-200"
+        style={{
+          background: "linear-gradient(135deg, var(--color-accent-dim), var(--color-accent))",
+          color: "#ffffff",
+        }}
+      >
+        Buy Credits
+      </button>
+    </div>
+  ) : null;
 
   return (
     <div className="flex-1 flex flex-col">
@@ -170,6 +215,8 @@ export default function InterviewPage() {
         messages={messages}
         onSendMessage={handleSendMessage}
         isLoading={isLoading}
+        disabled={outOfCredits}
+        banner={outOfCreditsBanner}
       />
     </div>
   );

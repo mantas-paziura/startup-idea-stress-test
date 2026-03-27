@@ -45,10 +45,14 @@ export default function ChatInterface({
   messages,
   onSendMessage,
   isLoading,
+  disabled = false,
+  banner,
 }: {
   messages: Message[];
   onSendMessage: (text: string) => void;
   isLoading: boolean;
+  disabled?: boolean;
+  banner?: React.ReactNode;
 }) {
   const [input, setInput] = useState("");
   const [focused, setFocused] = useState(false);
@@ -91,7 +95,7 @@ export default function ChatInterface({
     }
   }
 
-  const canSend = input.trim().length > 0 && !isLoading;
+  const canSend = input.trim().length > 0 && !isLoading && !disabled;
 
   return (
     <div className="flex flex-col h-full max-w-2xl mx-auto w-full relative">
@@ -105,14 +109,15 @@ export default function ChatInterface({
         </div>
       </div>
 
-      <form
-        onSubmit={handleSubmit}
+      <div
         className="fixed bottom-0 left-0 right-0 px-4 py-3 z-10"
         style={{
           borderTop: "1px solid var(--color-border)",
           background: "var(--background)",
         }}
       >
+        {banner}
+        <form onSubmit={handleSubmit}>
         <div
           className="flex items-center gap-2 rounded-lg px-3 py-2 transition-all duration-300 max-w-2xl mx-auto"
           style={{
@@ -129,7 +134,7 @@ export default function ChatInterface({
             onFocus={() => setFocused(true)}
             onBlur={() => setFocused(false)}
             placeholder="Type your answer..."
-            disabled={isLoading}
+            disabled={isLoading || disabled}
             rows={1}
             className="flex-1 text-base outline-none resize-none bg-transparent disabled:opacity-40 leading-relaxed"
             style={{ color: "var(--foreground)" }}
@@ -151,7 +156,8 @@ export default function ChatInterface({
             <SendIcon />
           </button>
         </div>
-      </form>
+        </form>
+      </div>
     </div>
   );
 }
