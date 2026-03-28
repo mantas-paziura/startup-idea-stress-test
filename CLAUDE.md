@@ -14,13 +14,21 @@ npm run lint     # ESLint
 
 No test suite exists yet.
 
+### Local dev setup (Windows)
+
+Two processes must run simultaneously:
+1. Next.js dev server — `npm run dev`
+2. Stripe webhook listener — `stripe listen --forward-to localhost:3000/api/webhooks/stripe`
+
+**Important**: When spawning the dev server from a shell that has `ANTHROPIC_API_KEY=''` set (e.g. Claude Code's own shell), `.env.local` will be silently overridden. Unset the variable before running: `Remove-Item Env:ANTHROPIC_API_KEY` in PowerShell, or load it explicitly from `.env.local`.
+
 ## Architecture
 
 This is a Next.js 16 app (App Router) where users submit a startup idea and are stress-tested by an AI playing a YC partner. After the interview, they receive a structured summary.
 
 ### Request flow
 
-1. User enters idea on `/` (home page)
+1. User enters idea on `/` (home page) — idea is stored in `sessionStorage` (single-tab)
 2. Redirected to `/interview` — a client component that manages the conversation
 3. On first message, `/api/sessions` creates a Supabase session row and returns its `id`
 4. The `sessionId` is passed to every `/api/chat` call; credits are deducted per message based on actual token usage (input/output tokens × rate with 4x margin)
@@ -31,11 +39,13 @@ This is a Next.js 16 app (App Router) where users submit a startup idea and are 
 
 ### Key architectural decisions
 
-- **Middleware lives in `proxy.ts`** (not `middleware.ts`) — Clerk auth middleware protects `/interview`, `/history`, `/credits`
-- **Singleton clients**: `lib/supabase.ts`, `lib/stripe.ts`, and the Anthropic client in the chat route are all lazily-initialized singletons. Always use `getSupabase()` and `getStripe()` rather than instantiating directly.
+- **Middleware lives in `proxy.ts`** (not `middleware.ts`) — Clerk auth middleware protects `/interview`, `/history`, `/credits`. The file must be named `proxy.ts` due to a Next.js 16 change; renaming to `middleware.ts` will break auth silently.
+- **Singleton clients**: `lib/supabase.ts`, `lib/stripe.ts`, and the Anthropic client in `app/api/chat/route.ts` and `app/api/suggestions/route.ts` are all lazily-initialized singletons. Always use `getSupabase()` and `getStripe()` rather than instantiating directly. The Anthropic client uses a `getClient()` helper for the same reason.
 - **Supabase uses service role key** (`SUPABASE_SERVICE_ROLE_KEY`) server-side — no RLS dependency
 - **Interview end detection**: The model returns raw JSON when done. `parseCompletionResponse` in the chat route tries `JSON.parse` first; if it succeeds and has `interviewDone: true`, the interview is over.
 - **Token-based credit deduction**: Credits are deducted per message based on actual API token usage (input × 0.00012 + output × 0.0006 credits/token, reflecting 4x margin on Anthropic costs with 1 credit = $0.10). Deduction uses an atomic Supabase RPC function `deduct_credits` to prevent race conditions. New users get 2 free credits auto-provisioned on first balance check.
+- **Progress estimation**: Interview progress is `min(95, (assistantTurnCount / 8) * 100)` — capped at 95% until `interviewDone: true` sets it to 100%.
+- **Session resumability**: Full `messages` array is stored in Supabase JSONB on every turn (fire-and-forget, not awaited). If `sessionStorage` is lost (new tab), the interview page redirects to home.
 
 ### Supabase tables
 
@@ -49,6 +59,16 @@ This is a Next.js 16 app (App Router) where users submit a startup idea and are 
 ### Stripe credit packs
 
 Defined in `lib/stripe.ts` as `CREDIT_PACKS`. The checkout flow passes `userId` and `creditAmount` in Stripe session metadata; the webhook at `/api/webhooks/stripe` reads these to credit the user. Idempotency is enforced by checking `stripe_session_id` in `credit_transactions` before inserting.
+
+### Key types (`app/types.ts`)
+
+```ts
+Message: { id, role: "user" | "assistant", content }
+InterviewSummary: { strengths[], weaknesses[], criticalUnknowns[], mostImportantNextQuestion }
+ChatResponse: { reply, interviewDone, summary | null, balance?, creditsCost? }
+Session: { id, idea, status: "in-progress" | "completed", summary, messages?, createdAt }
+CreditPack: { id, name, credits, price, priceId }
+```
 
 ### Environment variables required
 

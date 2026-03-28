@@ -19,7 +19,11 @@ export default function MessageBubble({ message }: { message: Message }) {
                 border: "1px solid var(--color-bubble-user-border)",
                 borderRadius: "1rem 1rem 0.25rem 1rem",
               }
-            : {}
+            : {
+                background: "var(--color-surface)",
+                border: "1px solid var(--color-border)",
+                borderRadius: "1rem 1rem 1rem 0.25rem",
+              }
         }
       >
         <p className="text-base leading-relaxed whitespace-pre-wrap">
