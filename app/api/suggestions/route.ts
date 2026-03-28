@@ -4,7 +4,15 @@ import { NextResponse } from "next/server";
 import type { InterviewSummary } from "@/app/types";
 import { checkBalance, deductTokenCredits } from "@/lib/credits";
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+let client: Anthropic | null = null;
+function getClient(): Anthropic {
+  if (!client) {
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+    if (!apiKey) throw new Error("Missing ANTHROPIC_API_KEY");
+    client = new Anthropic({ apiKey });
+  }
+  return client;
+}
 
 const SUGGESTIONS_PROMPT = `You are a startup advisor. Given a stress test summary of a startup idea, provide concrete, actionable suggestions for how to improve each area.
 
@@ -42,7 +50,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const response = await client.messages.create({
+    const response = await getClient().messages.create({
       model: "claude-sonnet-4-6",
       max_tokens: 1024,
       system: SUGGESTIONS_PROMPT,

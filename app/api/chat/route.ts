@@ -5,7 +5,15 @@ import type { ChatResponse } from "@/app/types";
 import { checkBalance, deductTokenCredits } from "@/lib/credits";
 import { getSupabase } from "@/lib/supabase";
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+let client: Anthropic | null = null;
+function getClient(): Anthropic {
+  if (!client) {
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+    if (!apiKey) throw new Error("Missing ANTHROPIC_API_KEY");
+    client = new Anthropic({ apiKey });
+  }
+  return client;
+}
 
 const SYSTEM_PROMPT = `You are a YC partner conducting a fast, high-signal startup interview.
 
@@ -77,7 +85,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const response = await client.messages.create({
+    const response = await getClient().messages.create({
       model: "claude-sonnet-4-6",
       max_tokens: 1024,
       system: SYSTEM_PROMPT,
